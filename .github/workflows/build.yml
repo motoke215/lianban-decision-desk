@@ -50,7 +50,10 @@ jobs:
       - run: npx cap sync android
       - name: 编译已签名的 release APK
         working-directory: android
-        run: ./gradlew assembleRelease --no-daemon
+        # 兜底：gradlew 的执行位可能在 Windows 上提交时丢失，导致 "Permission denied"
+        run: |
+          chmod +x ./gradlew
+          ./gradlew assembleRelease --no-daemon
       - uses: actions/upload-artifact@v4
         with:
           name: 连板决策台-安卓APK

@@ -1,2 +1,7 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Gradle 包装脚本：shell 版必须保持 LF，否则 Linux 上会报 "bad interpreter: ^M"
+android/gradlew text eol=lf
+# Windows 批处理版必须保持 CRLF
+android/gradlew.bat text eol=crlf
