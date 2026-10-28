@@ -1,0 +1,58 @@
+name: 打包 Windows 安装包与安卓 APK
+
+on:
+  workflow_dispatch: {}        # 在 Actions 页面手动点「Run workflow」
+  push:
+    tags: ["v*"]               # 打 v1.0.1 这类标签也会触发
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run test:runtime
+      - run: npx vitest run
+
+  windows:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - run: npm run electron:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 连板决策台-Windows安装包
+          path: release/*.exe
+          if-no-files-found: error
+
+  android:
+    needs: test
+    runs-on: ubuntu-latest
+    env:
+      ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - run: npm ci
+      - run: npm run build:web
+      - run: npx cap sync android
+      - name: 编译已签名的 release APK
+        working-directory: android
+        run: ./gradlew assembleRelease --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: 连板决策台-安卓APK
+          path: android/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
